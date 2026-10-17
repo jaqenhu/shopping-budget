@@ -1,0 +1,11 @@
+backups/
+preview/
+exports/
+data/
+.cache/
+node_modules/
+.env
+.env.*
+!.env.example
+supabase/.temp/
+*.log
