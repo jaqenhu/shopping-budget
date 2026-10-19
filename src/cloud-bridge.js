@@ -1,4 +1,7 @@
-/* Embedded inside the application scope; uses the existing UI and state. */
+/* >_ cloud-bridge · 给单文件小账本接一根云端网线 🔌
+ * 由嵌入脚本放进页面作用域，复用现有 state、弹窗与保存提示。
+ * CLOUD_CONFIG 只放公开连接配置；OAuth Client Secret 留在 Supabase 控制台。
+ */
 const CLOUD_CONFIG = Object.freeze({
   url: "https://gihfseniokebvxxyqllq.supabase.co",
   publishableKey: "sb_publishable_PtcbnUriil2pr85iiQLoaw_LsTlJfkI",
@@ -75,6 +78,7 @@ async function applyCloudSession(session) {
     $("saveStatus").textContent = persistent ? "本地模式" : "本次页面暂存";
     return;
   }
+  // [account boundary] 先清空视图，再读取这个账号的数据，避免闪现上一份清单。
   state = emptyCloudState();
   render();
   await syncEngine.activate(nextUser.id);
@@ -113,6 +117,7 @@ async function setupCloud() {
       return data;
     },
     writeRemote:async({userId,payload,revision})=>{
+      // [compare & swap] 只写入刚读取的版本；空结果按冲突处理，交回用户选择。
       const table=cloudClient.from("shopping_budgets");
       const request=revision===null
         ? table.insert({user_id:userId,payload,revision:0})
@@ -124,6 +129,7 @@ async function setupCloud() {
     }
   });
   cloudClient.auth.onAuthStateChange((_event,session)=>{
+    // [auth lock] 回调先返回，数据库读取留到下一轮，避免等待认证锁。
     setTimeout(()=>{void applyCloudSession(session).catch(()=>{
       $("saveStatus").textContent="登录状态读取失败";
     });},0);

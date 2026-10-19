@@ -1,3 +1,4 @@
+// >_ save means saved · 写入失败就明确报出来，别给“已保存”假象 💾
 const {test}=require('node:test');
 const assert=require('node:assert/strict');
 const fs=require('node:fs');

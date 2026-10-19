@@ -1,3 +1,4 @@
+// >_ guardrails · 空清单、断网、账号切换和多端冲突，逐个过一遍 🧪
 const {test} = require('node:test');
 const assert = require('node:assert/strict');
 const {BudgetSyncEngine} = require('../src/sync-engine.js');

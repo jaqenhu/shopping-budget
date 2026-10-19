@@ -1,4 +1,7 @@
-/* Budget cloud sync. Embedded into index.html by scripts/embed-runtime.cjs. */
+/* >_ sync-engine · 小账本的同步内核 🔄
+ * 维护入口：本文件；发布副本：由 scripts/embed-runtime.cjs 嵌入 index.html。
+ * dirty 留住待同步修改，revision 检测云端冲突，epoch 隔离账号切换后的迟到响应。
+ */
 (function (root) {
   "use strict";
   const clone = value => JSON.parse(JSON.stringify(value));
@@ -32,6 +35,7 @@
       try {
         const key = this.prefix + this.userId;
         const current = this.storage.getItem(key);
+        // [guard] 别覆盖另一个标签页还没同步的草稿。
         if (current && current !== this.lastCacheRaw) {
           const other = JSON.parse(current);
           if (!this.validEntry(other) || other.dirty && JSON.stringify(other.payload) !== JSON.stringify(this.entry.payload)) {
@@ -60,6 +64,7 @@
     }
     deactivate() {
       this.cancelTimer();
+      // [epoch] 账号切换后，旧请求返回也不能再改动当前清单。
       this.epoch++;
       this.userId = null;
       this.entry = null;
@@ -124,6 +129,7 @@
           return;
         }
         this.conflict = null;
+        // [empty] 云端没有记录时只展示空清单，不顺手上传本地示例。
         this.entry = {payload: row ? clone(row.payload) : this.options.emptyState(),
           revision: row?.revision ?? null, dirty: false};
         this.ready = true;
@@ -159,6 +165,7 @@
       try {
         while (epoch === this.epoch && this.entry?.dirty && !this.conflict) {
           const payload = clone(this.entry.payload);
+          // [snapshot] 版本用于条件写入；序号识别请求途中新增的本地修改。
           const revision = this.entry.revision;
           const sequence = this.sequence;
           this.status("saving");
@@ -198,7 +205,7 @@
     async useRemote() {
       if (!this.conflict || this.conflict.remote === undefined) return false;
       const row = this.conflict.remote;
-      // Keep a recovery copy before discarding any local edits.
+      // [undo buffer] 切换到云端版本前，先写好本地恢复副本。
       const recovery = JSON.stringify({savedAt: new Date().toISOString(), ...this.entry});
       try {
         const key = this.prefix + this.userId + ":conflict-recovery";
